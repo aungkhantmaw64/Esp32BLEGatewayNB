@@ -2,10 +2,32 @@
 
 #define OBSERVER_NAME "GATEWAY"
 
+#define ENDIAN_CHANGE_U16(x) ((((x)&0xFF00) >> 8) + (((x)&0xFF) << 8))
+
 class ScanResponseCallback : public BLEAdvertisedDeviceCallbacks
 {
+    bool isIbeacon(std::string strManufacturerData)
+    {
+        uint8_t cManufacturerData[100];
+        strManufacturerData.copy((char *)cManufacturerData, strManufacturerData.length(), 0);
+        return (strManufacturerData.length() == 25 && cManufacturerData[0] == 0x4C && cManufacturerData[1] == 0x00);
+    }
+
     void onResult(BLEAdvertisedDevice advertisedDevice)
     {
+        std::string strManufacturerData = advertisedDevice.getManufacturerData();
+        if (isIbeacon(strManufacturerData))
+        {
+            BLEBeacon oBeacon = BLEBeacon();
+            oBeacon.setData(strManufacturerData);
+#ifdef DEBUG_LOG
+            Serial.printf("ID: %04X\n", oBeacon.getManufacturerId());
+            Serial.printf("Major: %d\n", ENDIAN_CHANGE_U16(oBeacon.getMajor()));
+            Serial.printf("Minor: %d\n", ENDIAN_CHANGE_U16(oBeacon.getMinor()));
+            Serial.printf("UUID: %s\n", oBeacon.getProximityUUID().toString().c_str());
+            Serial.printf("RSSI: %d\n", oBeacon.getSignalPower());
+#endif
+        }
     }
 };
 
